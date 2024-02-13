@@ -1,5 +1,11 @@
 # Network Analysis implementations
-Under-construction methods.
+Under-construction methods:
+1. Baseline model based on Hierarchical Clustering
+2. WGCNA based on pyWGCNA
+3. not clear yet
+
+Other methods:
+1. Hybrid Bayesian Neural Networks
 
 ## Project structure:
 ```yml
