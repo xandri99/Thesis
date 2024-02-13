@@ -1,0 +1,6 @@
+pyWGCNA
+pandas
+numpy
+scipy
+matplotlib
+networkx
