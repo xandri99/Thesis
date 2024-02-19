@@ -19,5 +19,5 @@ __pycache__/
 ### PROTECTED DATA
 data/PROTECTED_DATA/
 results/
-results/Hierarchical_Clustering_figures
-results/WGCNA_figures
+results/Hierarchical_Clustering_figures/
+results/WGCNA_figures/
