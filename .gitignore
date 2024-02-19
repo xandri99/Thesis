@@ -20,3 +20,4 @@ __pycache__/
 data/PROTECTED_DATA/
 results/
 results/Hierarchical_Clustering_figures
+results/WGCNA_figures
