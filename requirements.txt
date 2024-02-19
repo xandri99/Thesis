@@ -6,3 +6,4 @@ matplotlib
 networkx
 os
 seaborn
+openpyxl
