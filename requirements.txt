@@ -7,3 +7,4 @@ networkx
 os
 seaborn
 openpyxl
+cupy

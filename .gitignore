@@ -14,8 +14,6 @@ __pycache__/
 # untrack data files, uncomment to activate
 # data/
 
-
-
 ### PROTECTED DATA
 data/PROTECTED_DATA/
 results/
