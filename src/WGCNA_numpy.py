@@ -1,4 +1,7 @@
-"""Sample module with a utility function"""
+"""
+WGCNA Implementation Using Numpy
+
+"""
 
 
 def square_func(number: float) -> float:
