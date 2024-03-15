@@ -1,7 +1,7 @@
 # Network Analysis implementations
 Under-construction methods:
 1. Baseline model based on Hierarchical Clustering
-2. WGCNA based on pyWGCNA
+2. WGCNA based on pyWGCNA -> add the survival probability plot for low mid high expression in the modules (paper of jim's journal club)
 3. not clear yet
 
 Other methods:
