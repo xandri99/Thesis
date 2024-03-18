@@ -59,7 +59,7 @@ FAIL = "\033[91m"
 #                                       PREPROCESSING
 ################################################################################################
 
-def simple_preprocessing():
+def simple_preprocess():
     # Step 1: Filter out genes with low expression across all samples
     # Threshold set so that a gene needs to be expressed TPM > 1 in at least 10% of samples## Remove genes with no variation across samples (0 vectors) 
     cleaned_dataset = raw_data.loc[:, (raw_data != 0).any(axis=0)] # Actually droping columns with 0 variation
@@ -71,4 +71,61 @@ def simple_preprocessing():
     return cleaned_dataset
 
 
+## Prepare and clean data
+def preprocess_TPM(raw_data):
+    '''
+    
+    
+    '''
+    # Step 1: Filter out genes with low expression across all samples
+    # Threshold set so that a gene needs to be expressed TPM > 1 in at least 10% of samples
+    expression_th = 1
+    cleaned_dataset = raw_data.loc[:, (raw_data > expression_th).any(axis=0)].copy()
+    
+    # Step 2: Log transformation
+    cleaned_dataset.iloc[:, 1:] = np.log2(cleaned_dataset.iloc[:, 1:] + 1)
+    
+    return cleaned_dataset
 
+
+## Prepare and clean data
+def preprocess_TPM_outlier_deletion(raw_data):
+    '''
+    
+    
+    '''
+    # Step 1: Filter out genes with low expression across all samples
+    # Threshold set so that a gene needs to be expressed TPM > 1 in at least 10% of samples
+    expression_th = 1
+    cleaned_dataset = raw_data.loc[:, (raw_data > expression_th).any(axis=0)].copy()
+    
+    # Step 2: Log transformation
+    cleaned_dataset.iloc[:, 1:] = np.log2(cleaned_dataset.iloc[:, 1:] + 1)
+    
+    # Step 3: Outlier detection and removal based on PCA
+    pca = PCA(n_components=2)
+    pca_result = pca.fit_transform(cleaned_dataset.iloc[:, 1:].T)  # Transpose to have samples as rows for PCA
+    z_scores = np.abs(stats.zscore(pca_result, axis=0))
+    good_samples = (z_scores < 3).all(axis=1)  # Keeping samples within 3 standard deviations
+    cleaned_dataset = cleaned_dataset.iloc[:, [True] + good_samples.tolist()]  # True for gene identifiers column
+    
+    # Step 7: Data Standardization (Z-score normalization)
+    cleaned_dataset.iloc[:, 1:] = cleaned_dataset.iloc[:, 1:].apply(stats.zscore, axis=1)
+
+    
+    return cleaned_dataset
+
+    
+# Plotting PCA function for visualization
+def plot_pca(dataframe, title='PCA before and after preprocessing', ax=None):
+    """
+    Performs PCA on the provided dataframe and plots the first two principal components.
+    """
+    pca = PCA(n_components=2)
+    pca_result = pca.fit_transform(dataframe.iloc[:, 1:].T)
+    if ax is None:
+        fig, ax = plt.subplots()
+    ax.scatter(pca_result[:, 0], pca_result[:, 1], alpha=0.5)
+    ax.set_title(title)
+    ax.set_xlabel('PC1')
+    ax.set_ylabel('PC2')
