@@ -335,7 +335,7 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th):
     pca_result = pca.fit_transform(cleaned_dataset.iloc[:, 1:])  # NOT Transpose to have samples as rows for PCA
     z_scores = np.abs(stats.zscore(pca_result, axis=0))
     good_samples = (z_scores < 3).all(axis=1)                      # Keeping samples within 3 standard deviations
-    cleaned_dataset = cleaned_dataset.iloc[:, [True] + good_samples.tolist()] 
+    cleaned_dataset = cleaned_dataset[good_samples].reset_index(drop=True)
     
     # Data Standardization (Z-score normalization)
     cleaned_dataset.iloc[:, 1:] = cleaned_dataset.iloc[:, 1:].apply(stats.zscore, axis=1)
