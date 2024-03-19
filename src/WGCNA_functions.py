@@ -960,7 +960,7 @@ def calculate_eigen_genes(expression_profiles, want_plots, figures_dir):
         plt.ylabel('Eigengene Expression Level', fontsize=10)
         plt.xticks(rotation=90)
         plt.xticks([])
-        plt.legend()
+        #plt.legend()
         plt.tight_layout()
         plt.savefig(figures_dir + title_figure, dpi=DPI_GENERAL)
         plt.show()
@@ -981,17 +981,14 @@ def calculate_eigen_genes(expression_profiles, want_plots, figures_dir):
 
 def encode_categorical(df, column):
     """
-    Encodes a categorical column in a DataFrame. For the 'Age' column, it extracts numeric values.
-    Other categorical variables are one-hot encoded.
+    Encodes a categorical column in a DataFrame. 
 
     Parameters:
     - df (pd.DataFrame): The DataFrame containing the column to be encoded.
     - column (str): The name of the column to encode.
 
     Returns:
-    - pd.DataFrame: The DataFrame with the specified column encoded. If the column is 'Age',
-                    numeric values are extracted and converted to integers. Other categorical
-                    variables are one-hot encoded and the original column is dropped.
+    - pd.DataFrame: The DataFrame with the specified column encoded. 
     """
     if df[column].dtype == 'object':
         if column == 'Age':  # Assuming Age has an order
@@ -1000,6 +997,65 @@ def encode_categorical(df, column):
             dummies = pd.get_dummies(df[column], prefix=column)
             df = pd.concat([df, dummies], axis=1)
             df = df.drop(column, axis=1)
+    return df
+
+
+
+def encode_categorical_DC(df, column):
+    """
+    Encodes a single categorical column in a DataFrame as ordered (ordinal) or unordered (nominal) 
+    based on the column's dtype or unique values.
+    
+    - For an ordered categorical column, encodes the column with ordinal encoding (integer codes).
+    - For an unordered categorical column, applies one-hot encoding.
+
+    Parameters:
+    - df (pd.DataFrame): The DataFrame containing the column to be encoded.
+    - column (str): The name of the column to encode.
+
+    Returns:
+    - pd.DataFrame: The DataFrame with the specified column encoded. 
+    """
+    # We assume that all dtype object are categorical variables
+    if df[column].dtype == 'object':  
+
+        # Some Categorical are ordinal (manually coded)
+        if column == 'Age group':
+            # Hardcode the order mapping for age categoircal ordered variable
+            age_mapping = {
+                '≤ 65': 1,
+                '66-79': 2,
+                '≥ 80': 3
+                }
+            
+            # Apply the map to get the dummy variables
+            df.loc[:, 'Age group_Ordinal'] = df['Age group'].map(age_mapping)
+
+        elif column == 'Tumour Stage':
+            # Hardcode the order mapping for age categoircal ordered variable
+            tumor_mapping = {
+                'Stage I': 1,
+                'Stage II': 2,
+                'Stage III': 3,
+                'Stage IV': 4
+                }
+            
+            # Apply the map to get the dummy variables
+            df.loc[:, 'Tumour Stage_Ordinal'] = df['Tumour Stage'].map(tumor_mapping)
+
+        else:
+            dummies = pd.get_dummies(df[column], prefix=column)
+            df = pd.concat([df, dummies], axis=1)
+            df = df.drop(column, axis=1)
+    
+    elif df[column].dtype == 'float64':
+        # If its a float, we can already do the normal correlation
+        print("")
+
+    else:
+        print("unexpected type of varibale, check with the encoding process.")
+
+
     return df
 
 
@@ -1034,6 +1090,50 @@ def calculate_correlations(eigen_genes, trait_dataset, trait_columns):
             # Calculate correlations for all samples and all eigengenes
             for trait_name in trait_data.columns:
                 cor, p_val = stats.spearmanr(module_data['eigengene'], trait_data[trait_name])
+                correlations.loc[module, trait_name] = cor
+                p_values.loc[module, trait_name] = p_val
+
+    return correlations, p_values
+
+
+
+@measure_time
+def eigen_trait_correlations_DC(eigen_genes, trait_dataset, trait_columns):
+    """
+    Calculates Spearman/Pearson correlations and p-values between eigengenes and specified trait columns.
+    Works with different types of encoding
+
+    Parameters:
+    - eigen_genes (pd.DataFrame): DataFrame of eigengenes with 'Module' as one of the columns.
+    - trait_dataset (pd.DataFrame): DataFrame of traits, which may contain categorical variables.
+    - trait_columns (list of str): List of column names from 'trait_dataset' to calculate correlations with.
+
+    Returns:
+    - Tuple of DataFrames: (correlations, p_values) wtranscriptomics_dataset_filteredhere each DataFrame contains the Spearman correlation
+      coefficients and p-values between each module's eigengene and the specified traits.
+    """
+    correlations = pd.DataFrame()
+    p_values = pd.DataFrame()
+
+    for trait in trait_columns:
+        # Get encoded traits to be able to calculate Spearman Correlation
+        trait_dataset_encoded = encode_categorical_DC(trait_dataset.copy(), trait)
+        trait_data = trait_dataset_encoded.filter(like=trait)  
+
+        for module in eigen_genes['Module'].unique():
+            # Get the Expression Profile vector for each EigenGene (representing each module). 
+            module_data = eigen_genes[eigen_genes['Module'] == module].drop('Module', axis=1).T
+            module_data.columns = ['eigengene']
+
+            for trait_name in trait_data.columns:
+                if 'Ordinal' in trait_name or trait_dataset_encoded[trait_name].dtype in ['int64', 'float64']:
+                    # Use Pearson correlation for ordinal or continuous variables
+                    cor, p_val = stats.pearsonr(module_data['eigengene'], trait_data[trait_name])
+                else:
+                    # Use Spearman correlation for categorical variables
+                    cor, p_val = stats.spearmanr(module_data['eigengene'], trait_data[trait_name])
+
+
                 correlations.loc[module, trait_name] = cor
                 p_values.loc[module, trait_name] = p_val
 
