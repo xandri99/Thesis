@@ -325,6 +325,10 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th):
     
     # Apply log2 transformation to all values except for the first column (gene identifiers)
     cleaned_dataset.iloc[:, 1:] = np.log2(cleaned_dataset.iloc[:, 1:] + 1)
+
+    # Print the number of genes removed
+    num_genes_removed = raw_data.shape[1] - cleaned_dataset.shape[1]
+    print(f"{BOLD}{WARNING}preprocess_TPM_outlier_deletion function removed {num_genes_removed} genes{ENDC}")
     
     # Outlier detection and removal based on PCA
     pca = PCA(n_components=2)
@@ -337,8 +341,9 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th):
     cleaned_dataset.iloc[:, 1:] = cleaned_dataset.iloc[:, 1:].apply(stats.zscore, axis=1)
 
     # Print the number of genes removed
-    num_genes_removed = raw_data.shape[1] - cleaned_dataset.shape[1]
-    print(f"{BOLD}{WARNING}preprocess_TPM_outlier_deletion function removed {num_genes_removed} genes{ENDC}")
+    num_pacients_removed = raw_data.shape[0] - cleaned_dataset.shape[0]
+    print(f"{BOLD}{WARNING}preprocess_TPM_outlier_deletion function removed {num_pacients_removed} pacients{ENDC}")
+
 
     print(f"{BOLD}{OKBLUE}Done...{ENDC}")
     return cleaned_dataset
