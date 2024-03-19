@@ -1147,7 +1147,7 @@ def eigen_trait_correlations_DC(eigen_genes, trait_dataset, trait_columns):
 
 
 ################################################################################################
-#                                    MODULE-TRAIT RELATIONSHIP
+#                                    FULL EXECUTIONS
 ################################################################################################
 
 def run_full_WGCNA(transcriptomics_dataset, expression_th, trait_dataset, want_plots, figures_dir, \
@@ -1200,9 +1200,77 @@ def run_full_WGCNA(transcriptomics_dataset, expression_th, trait_dataset, want_p
     # Step 8
     print(f"{BOLD}{OKBLUE}\n\nStep 8{ENDC}")
     trait_columns = list(trait_dataset_filtered.columns[1:] )
-    correlations, p_values = calculate_correlations(eigen_genes, trait_dataset_filtered, trait_columns)
+    correlations, p_values = eigen_trait_correlations_DC(eigen_genes, trait_dataset_filtered, trait_columns)
+
 
 
     print(f"{BOLD}{OKBLUE}Done\n\n{ENDC}")
 
-    return correlations
+    return correlations, p_values
+
+
+
+def run_partialA_WGCNA(transcriptomics_dataset, expression_th, trait_dataset, want_plots, figures_dir, \
+                   RsquaredCut, MeanCut, block_size_scalefit, adjacency_type, TOMDenom):
+    ### Step 1: Data Preprocessing (Normalization)
+    print(f"{BOLD}{OKBLUE}Step 1{ENDC}")
+    transcriptomics_dataset_filtered, trait_dataset_filtered = preprocess_TPM_outlier_deletion(transcriptomics_dataset, expression_th, trait_dataset)
+
+
+    ### Step 2: Constructing a Co-expression Similarity Matrix (Correlation Matrix)
+    print(f"{BOLD}{OKBLUE}\n\nStep 2{ENDC}")
+    correlation_matrix_np = correlation_matrix(transcriptomics_dataset_filtered, want_plots, figures_dir)
+    matrix_np_check(correlation_matrix_np, 1, -1, 1)
+
+
+    ### Step 3: Transforming into an adjacency matrix using a soft threshold power
+    print(f"{BOLD}{OKBLUE}\n\nStep 3{ENDC}")
+    optimal_power = pickSoftThreshold(correlation_matrix_np, transcriptomics_dataset_filtered, RsquaredCut, MeanCut, True, figures_dir, block_size_scalefit)
+
+    adjacency_matrix_np = adjacencyM_from_correlationM(correlation_matrix_np, optimal_power, adjacency_type, want_plots, figures_dir)
+    matrix_np_check(adjacency_matrix_np, 1, 0, 1)
+
+
+    ### Step 4: Converting adjacency matrix into a topological overlap matrix (TOM)
+    print(f"{BOLD}{OKBLUE}\n\nStep 4{ENDC}")
+    simTOM_np = calculate_tom(adjacency_matrix_np, TOMDenom, adjacency_type, want_plots, figures_dir)
+    dissTOM_np = 1 - simTOM_np
+    matrix_np_check(simTOM_np, 1, 0, 1)
+
+
+    ### Step 5: Hierarchical clustering
+    print(f"{BOLD}{OKBLUE}\n\nStep 5{ENDC}")
+    linkage_matrix = hierarchical_clustering(dissTOM_np, want_plots, figures_dir)
+
+
+    return linkage_matrix, transcriptomics_dataset_filtered, trait_dataset_filtered
+
+
+
+def run_partialB_WGCNA(linkage_matrix, transcriptomics_dataset_filtered, \
+                       trait_dataset_filtered, want_plots, figures_dir, \
+                        height_percentile, min_memb_cluster):
+
+    ### Step 6: Module identification
+    print(f"{BOLD}{OKBLUE}\n\nStep 6{ENDC}")
+    module_assignment, cut_height = identify_modules_simple_version(linkage_matrix, height_percentile, min_memb_cluster)
+    module_assignment.insert(0, 'Gene Name', list(transcriptomics_dataset_filtered))
+
+
+    ### Step 7: Calculate EigenGenes for all identified Modules
+    print(f"{BOLD}{OKBLUE}\n\nStep 7{ENDC}")
+    expression_profiles = expression_profile_for_cluster(module_assignment, transcriptomics_dataset_filtered)
+
+    eigen_genes = calculate_eigen_genes(expression_profiles, want_plots, figures_dir)
+
+
+    # Step 8
+    print(f"{BOLD}{OKBLUE}\n\nStep 8{ENDC}")
+    trait_columns = list(trait_dataset_filtered.columns[1:] )
+    correlations, p_values = eigen_trait_correlations_DC(eigen_genes, trait_dataset_filtered, trait_columns)
+
+
+
+    print(f"{BOLD}{OKBLUE}Done\n\n{ENDC}")
+
+    return module_assignment, correlations, p_values
