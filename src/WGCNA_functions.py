@@ -959,7 +959,8 @@ def calculate_eigen_genes(expression_profiles, want_plots, figures_dir):
         plt.xlabel('Samples (pacients)', fontsize=10)
         plt.ylabel('Eigengene Expression Level', fontsize=10)
         plt.xticks(rotation=90)
-        # plt.legend()
+        plt.xticks([])
+        plt.legend()
         plt.tight_layout()
         plt.savefig(figures_dir + title_figure, dpi=DPI_GENERAL)
         plt.show()
@@ -1014,7 +1015,7 @@ def calculate_correlations(eigen_genes, trait_dataset, trait_columns):
     - trait_columns (list of str): List of column names from 'trait_dataset' to calculate correlations with.
 
     Returns:
-    - Tuple of DataFrames: (correlations, p_values) where each DataFrame contains the Spearman correlation
+    - Tuple of DataFrames: (correlations, p_values) wtranscriptomics_dataset_filteredhere each DataFrame contains the Spearman correlation
       coefficients and p-values between each module's eigengene and the specified traits.
     """
     correlations = pd.DataFrame()
