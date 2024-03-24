@@ -18,6 +18,7 @@ import sys
 import gc
 import time
 
+from lifelines import KaplanMeierFitter
 
 from statsmodels.formula.api import ols
 
@@ -153,7 +154,22 @@ def plot_heatmap(data, title, figures_dir, vmin, vmax):
 
 
 def printSoftThresholdSearch(results, RsquaredCut, optimal_power, figures_dir):
-    # Plotting the results
+    """
+    Generates and saves plots for the Scale-Free Topology fit analysis and Mean Connectivity 
+    as functions of the soft-thresholding power used in network construction. 
+
+    Parameters:
+    - results (DataFrame): A DataFrame containing the soft-thresholding powers and their 
+      corresponding R² values for scale-free fit and mean connectivity measures.
+    - RsquaredCut (float): The R² value used as a cutoff for determining the scale-free topology 
+      fit, indicating a satisfactory fit when exceeded by the actual R² values.
+    - optimal_power (int): The soft-thresholding power at which the scale-free topology fit 
+      R² is above the RsquaredCut and possibly optimal for network construction.
+    - figures_dir (str): The directory path where the generated plots will be saved.
+
+    Returns:
+    - None, it generates and saves the plots.
+    """
     print(f"{BOLD}{OKBLUE}Plotting and Saving Scale-Free Topology fit analysis...{ENDC}")
     title_figure1 = 'Scale-Free Topology Analysis'
     title_figure2 = 'Mean Connectivity'
@@ -186,7 +202,21 @@ def printSoftThresholdSearch(results, RsquaredCut, optimal_power, figures_dir):
 
 
 def plot_dendogram(data, title, figures_dir):
-    # Plotting a Dendogram
+    """
+    Generates a dendrogram to visually represent the hierarchical clustering of data, 
+    used here to show the clustering of genes based on their similarity or 
+    dissimilarity measured by distance from the Topological Overlap Matrix (TOM).
+    
+    Parameters:
+    - data (ndarray or a linkage matrix): The hierarchical clustering encoded as a linkage 
+      matrix or raw data array. If it's a linkage matrix, it describes the hierarchical 
+      clustering structure.
+    - title (str): The title of the dendrogram plot.
+    - figures_dir (str): The directory path where the generated dendrogram will be saved.
+    
+    Returns:
+    - None, it generates and saves the dendrogram plot.
+    """
     print(f"{BOLD}{OKBLUE}Plotting and Saving {title}...{ENDC}")
 
     plt.figure(figsize=(15, 10))
@@ -239,6 +269,36 @@ def plot_module_distribution(module_assignment):
 
     plt.tight_layout()
     plt.show()
+
+
+def correlation_pvalue_heatmap(correlations, p_values, figures_dir):
+    """
+    Generates a heatmap showing correlations between module eigengenes and clinical traits, 
+    with annotations for the corresponding p-values.
+    
+    Parameters:
+    - correlations (DataFrame): A square DataFrame where rows and columns represent modules 
+      and clinical traits respectively, and the cell values are the correlations between them.
+    - p_values (DataFrame): A DataFrame of the same shape as correlations, where each cell 
+      contains the p-value associated with the corresponding correlation.
+    - figures_dir (str): Directory path where the generated heatmap will be saved.
+    
+    Returns:
+    - None, it generates and saves the plot as a file.
+    """
+    print(f"{BOLD}{OKBLUE}Plotting and Saving the Module EigenGene to Clinical Trait Correlation...{ENDC}")
+    title_figure = 'Module Eigengene to Clinical Trait Correlation'
+
+    annotations = correlations.round(3).astype(str) + '\n(' + p_values.round(5).astype(str) + ')'
+
+    plt.figure(figsize=(40, 40)) 
+    sns.heatmap(correlations, annot=annotations.values, fmt='', cmap='coolwarm', center=0, vmin=-1, vmax=1)
+    plt.title(title_figure, fontsize=20)
+    plt.xlabel('Selected Clincal Traits', fontsize=10)
+    plt.ylabel('Identified Modules, represented by their EigenGene', fontsize=10)
+    plt.savefig(figures_dir + title_figure, dpi=150)
+    plt.show()
+    print(f"{BOLD}{OKBLUE}Done{ENDC}")
 
 
 
@@ -1147,7 +1207,91 @@ def eigen_trait_correlations_DC(eigen_genes, trait_dataset, trait_columns):
 
 
 ################################################################################################
-#                                    FULL EXECUTIONS
+#                                    SURVIVAL PROBABILITY
+################################################################################################
+
+def survival_probability(correlations, corr_th, expression_profiles, survival_dataset, figures_dir):
+    """
+    Analyzes survival probabilities based on the median expression levels of pacients for the genes in the 
+    selected modules.
+    Median is used as per the paper 'The proteomic landscape of soft tissue sarcomas'.
+
+    It identifies modules with correlations above a specified threshold, stratifies patients into tertiles based 
+    on their median gene expression within these modules, and plots Kaplan-Meier survival curves for each tertile group.
+
+    Parameters:
+    - correlations (DataFrame): A DataFrame containing correlations between modules and a clinical trait.
+    - corr_th (float): The correlation threshold for selecting modules of interest.
+    - expression_profiles (DataFrame): Gene expression profiles with columns for 'Module', 'Gene Name', and expression levels.
+    - survival_dataset (DataFrame): Patient survival data, including 'Overall survival days' and 'Vital Status'.
+    
+    Returns:
+    - Generates Kaplan-Meier survival plots for high-correlation modules.
+    """
+    high_corr_modules = correlations[correlations > corr_th].dropna(how='all')
+    high_corr_modules = high_corr_modules.index.tolist()
+
+
+    # Iterate over each selected module to make further analysis
+    for module in high_corr_modules:
+        # Build the full expression profile for each module
+        module_expression_profile = expression_profiles[expression_profiles['Module'] == module]
+        module_expression_profile = module_expression_profile.drop(columns=['Module'])
+        module_expression_profile.set_index('Gene Name', inplace=True)
+        module_expression_profile = module_expression_profile.T
+
+        # Calculate the median expression profile of each pacient in this module (cluster of genes)
+        pacients_median_module_expression = pd.DataFrame(module_expression_profile.median(axis=1), columns=['MedianExpressionValue']) 
+
+        # Perform subgroup identification by tertile stratification
+        pacients_median_module_expression['TertileGroup'] = pd.qcut(pacients_median_module_expression['MedianExpressionValue'], 3, labels=['Low', 'Medium', 'High'])
+
+        # Merge with the survival days dataset for further analysis
+        module_survival_stratification = pd.merge(pacients_median_module_expression, survival_dataset, left_index=True, right_index=True)
+
+        # Identify and remove rows with NaN values in 'Overall survival days' or 'DeathEvent'
+        module_survival_stratification = module_survival_stratification.dropna(subset=['Overall survival days', 'Vital Status'])
+
+
+        ## Kaplan–Meier survival plot of MFS across the three subgroups for each module
+        # Dummify Vital Status into DeathEvenet, identifying as 1 pacients that died, and 0 pacients alive.
+        module_survival_stratification['Vital Status'] = module_survival_stratification['Vital Status'].replace({'Dead': 1, 'Alive': 0}).astype(int)
+
+        # Rename the column 'Vital Status' to 'DeathEvent'
+        module_survival_stratification.rename(columns={'Vital Status': 'DeathEvent'}, inplace=True)
+
+        # Initialize the Kaplan-Meier fitter
+        kmf = KaplanMeierFitter()
+
+        plt.figure(figsize=(10, 6))
+
+        # Plot survival curves for each group
+        for group in ['Low', 'Medium', 'High']:
+            # Select data for the group
+            group_data = module_survival_stratification[module_survival_stratification['TertileGroup'] == group]
+            
+            # Fit data
+            kmf.fit(durations=group_data['Overall survival days'], event_observed=group_data['DeathEvent'], label=group)
+            
+            # Plot the survival curve
+            kmf.plot_survival_function()
+
+        title = 'Survival by Tertile Groups in Module ' + str(module)
+        plt.title(title)
+        plt.xlabel('Time in Days')
+        plt.ylabel('Survival Probability')
+        plt.savefig(figures_dir + title, dpi=DPI_GENERAL)
+        plt.show()
+
+
+################################################################################################
+
+
+
+
+
+################################################################################################
+#                               FULL and PARTIAL EXECUTIONS
 ################################################################################################
 
 def run_full_WGCNA(transcriptomics_dataset, expression_th, trait_dataset, want_plots, figures_dir, \
