@@ -1,0 +1,235 @@
+---
+title: "R_WGCNA"
+author: "Bernat Xandri Zaragoza"
+date: "2024-03-02"
+output: html_document
+---
+
+
+A 16GB workstation should handle up to 20000 probes; a 32GB workstation should handle perhaps 30000. A 4GB standard desktop or a laptop may handle up to 8000-10000 probes, depending on operating system and other running programs.
+
+
+
+```{r setup, include=FALSE}
+# Load libraries
+library(WGCNA) 
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(gplots)
+library(pheatmap)
+library(fastDummies)
+library(pheatmap)
+
+
+
+```
+
+## WGCNA analysis test using R to debug my python implementation
+
+
+# Loading Data
+```{r }
+
+# Load the gene expression data
+file = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/CRC.SW.mRNA.symbol.TPM.csv"
+expressionData <- read.csv(file, row.names = 1)
+
+expressionData
+```
+
+
+
+# PreProcessing
+```{r }
+# remove only genes with expression 0 in all samples
+expressionData[apply(expressionData, 2, function(x) all(x == 0))] <- NULL
+expressionData
+
+
+```
+
+
+
+
+# soft-threshold search
+```{r }
+# multithread
+allowWGCNAThreads()
+
+# Choose a soft-thresholding power
+powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
+sft <- pickSoftThreshold(expressionData, powerVector = powers, verbose = 5) # can add block size: blockSize = 30
+
+# plot the selection process
+par(mfrow = c(1,2));
+cex1 = 0.9;
+
+plot(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     xlab = "Soft Threshold (power)",
+     ylab = "Scale Free Topology Model Fit, signed R^2",
+     main = paste("Scale independence")
+)
+text(sft$fitIndices[, 1],
+     -sign(sft$fitIndices[, 3]) * sft$fitIndices[, 2],
+     labels = powers, cex = cex1, col = "red"
+)
+abline(h = 0.90, col = "red")
+plot(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     xlab = "Soft Threshold (power)",
+     ylab = "Mean Connectivity",
+     type = "n",
+     main = paste("Mean connectivity")
+)
+text(sft$fitIndices[, 1],
+     sft$fitIndices[, 5],
+     labels = powers,
+     cex = cex1, col = "red")
+
+
+
+```
+
+
+
+
+
+# WGCNA
+```{r }
+# Manutally set the optimal power
+picked_power = 7
+
+temp_cor <- cor       
+cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
+
+
+
+# If the reader has access to a large workstation with more than 4 GB of memory, the parameter maxBlockSize can be increased.
+netwk <- blockwiseModules(expressionData,                # <= input here
+
+                          # == Adjacency Function ==
+                          power = picked_power,                # <= power here
+                          networkType = "signed",
+
+                          # == Tree and Block Options ==
+                          deepSplit = 2,
+                          pamRespectsDendro = F,
+                          # detectCutHeight = 0.75,
+                          minModuleSize = 20,
+                          maxBlockSize = 500,
+
+                          # == Module Adjustments ==
+                          reassignThreshold = 0,
+                          mergeCutHeight = 0.25,
+
+                          # == TOM == Archive the run results in TOM file (saves time)
+                          saveTOMs = T,
+                          saveTOMFileBase = "ER",
+
+                          # == Output Options
+                          numericLabels = T,
+                          verbose = 3)
+```
+
+
+
+
+# Plot Dendogram
+```{r }
+
+# Convert labels to colors for plotting
+mergedColors = labels2colors(netwk$colors)
+
+
+# Plot the dendrogram and the module colors underneath
+plotDendroAndColors(
+  netwk$dendrograms[[1]],
+  mergedColors[netwk$blockGenes[[1]]],
+  "Module colors",
+  dendroLabels = FALSE,
+  hang = 0.03,
+  addGuide = TRUE,
+  guideHang = 0.05 )
+
+
+```
+
+
+# Organize the eigengenes
+```{r }
+# list of modules
+module_df <- data.frame(
+  gene_id = names(netwk$colors),
+  colors = labels2colors(netwk$colors)
+)
+
+
+# Get Module Eigengenes per cluster
+Module_eigengenes <- moduleEigengenes(expressionData, mergedColors)$eigengenes
+
+# Reorder modules so similar modules are next to each other
+Module_eigengenes <- orderMEs(Module_eigengenes)
+module_order = names(Module_eigengenes) %>% gsub("ME","", .)
+Module_eigengenes
+
+```
+
+
+
+
+
+# Relate Module (cluster) Assignments to Treatment Groups
+```{r }
+
+# Relate modules to external traits
+# traits = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/Sample_Info_Selection.csv"
+
+traits = "C:/Users/bxz19/Documents/Bioinfo UU/Year 2/Semester 2/Thesis/Work/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/Sample_Info_Selection.csv"
+
+
+traits <- read.csv(traits, row.names = 1)
+traits
+
+
+# Convert categorical variables to dummy variables
+traitsDummy <- dummy_cols(traits, remove_first_dummy = FALSE, remove_selected_columns = TRUE)
+traitsDummy
+
+
+# Calculate correlations between Module Eigengenes and dummy-coded traits
+moduleTraitCorrelation <- cor(Module_eigengenes, traitsDummy, use = "pairwise.complete.obs")
+
+
+
+# Plot heatmap 
+
+# output file
+output_file <- "module_trait_correlation_heatmap.png"
+png(output_file, width = 1500, height = 2000, res = 250)
+
+# Generate the heatmap
+color_breaks <- seq(-1, 1, length.out = 100)
+pheatmap(moduleTraitCorrelation, 
+         color = colorRampPalette(c("blue", "white", "red"))(100), 
+         breaks = color_breaks,
+         display_numbers = TRUE,
+         fontsize_number = 4,
+         number_format = "%.3f",
+         main = "Heatmap of Module to Trait Correlation", 
+         fontsize_row = 5, 
+         fontsize_col = 5, 
+         cluster_cols = FALSE)
+
+dev.off()
+
+
+```
+
+
+
+
+
+
+
