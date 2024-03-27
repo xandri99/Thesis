@@ -1228,7 +1228,7 @@ def survival_probability(correlations, corr_th, expression_profiles, survival_da
     Returns:
     - Generates Kaplan-Meier survival plots for high-correlation modules.
     """
-    high_corr_modules = correlations[correlations > corr_th].dropna(how='all')
+    high_corr_modules = correlations[(correlations > corr_th) | (correlations < -corr_th)].dropna(how='all', axis=0)
     high_corr_modules = high_corr_modules.index.tolist()
 
 
