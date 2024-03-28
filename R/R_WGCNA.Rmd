@@ -32,7 +32,8 @@ library(pheatmap)
 ```{r }
 
 # Load the gene expression data
-file = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/CRC.SW.mRNA.symbol.TPM.csv"
+#file = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/CRC.SW.mRNA.symbol.TPM_NOnormal.csv"
+file = "C:/Users/bxz19/Documents/Bioinfo UU/Year 2/Semester 2/Thesis/Work/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/CRC.SW.mRNA.symbol.TPM_NOnormal.csv"
 expressionData <- read.csv(file, row.names = 1)
 
 expressionData
@@ -99,7 +100,7 @@ text(sft$fitIndices[, 1],
 # WGCNA
 ```{r }
 # Manutally set the optimal power
-picked_power = 7
+picked_power = 5
 
 temp_cor <- cor       
 cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
@@ -132,6 +133,7 @@ netwk <- blockwiseModules(expressionData,                # <= input here
                           numericLabels = T,
                           verbose = 3)
 ```
+
 
 
 
@@ -184,9 +186,9 @@ Module_eigengenes
 ```{r }
 
 # Relate modules to external traits
-# traits = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/Sample_Info_Selection.csv"
+# traits = "/home/bernat/Documents/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/All_Traits_Without_Normal.csv"
 
-traits = "C:/Users/bxz19/Documents/Bioinfo UU/Year 2/Semester 2/Thesis/Work/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/Sample_Info_Selection.csv"
+traits = "C:/Users/bxz19/Documents/Bioinfo UU/Year 2/Semester 2/Thesis/Work/Thesis/data/PROTECTED_DATA/BGI_Expression_Data/All_Traits_Without_Normal.csv"
 
 
 traits <- read.csv(traits, row.names = 1)
@@ -206,8 +208,8 @@ moduleTraitCorrelation <- cor(Module_eigengenes, traitsDummy, use = "pairwise.co
 # Plot heatmap 
 
 # output file
-output_file <- "module_trait_correlation_heatmap.png"
-png(output_file, width = 1500, height = 2000, res = 250)
+output_file <- "module_trait_correlation_heatmap_OnlyTumorSamples.png"
+png(output_file, width = 2500, height = 4000, res = 250)
 
 # Generate the heatmap
 color_breaks <- seq(-1, 1, length.out = 100)
