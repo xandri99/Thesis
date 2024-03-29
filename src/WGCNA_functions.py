@@ -1255,7 +1255,7 @@ def survival_probability(correlations, corr_th, expression_profiles, survival_da
 
         ## Kaplan–Meier survival plot of MFS across the three subgroups for each module
         # Dummify Vital Status into DeathEvenet, identifying as 1 pacients that died, and 0 pacients alive.
-        module_survival_stratification['Vital Status'] = module_survival_stratification['Vital Status'].replace({'Dead': 1, 'Alive': 0}).astype(int)
+        module_survival_stratification['Vital Status'] = module_survival_stratification['Vital Status'].map({'Dead': 1, 'Alive': 0})
 
         # Rename the column 'Vital Status' to 'DeathEvent'
         module_survival_stratification.rename(columns={'Vital Status': 'DeathEvent'}, inplace=True)
