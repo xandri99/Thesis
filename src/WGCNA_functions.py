@@ -1243,8 +1243,20 @@ def survival_probability(correlations, corr_th, expression_profiles, survival_da
         # Calculate the median expression profile of each pacient in this module (cluster of genes)
         pacients_median_module_expression = pd.DataFrame(module_expression_profile.median(axis=1), columns=['MedianExpressionValue']) 
 
-        # Perform subgroup identification by tertile stratification
-        pacients_median_module_expression['TertileGroup'] = pd.qcut(pacients_median_module_expression['MedianExpressionValue'], 3, labels=['Low', 'Medium', 'High'])
+        # Perform subgroup identification by tertile stratification dynamic
+        # Calculate the number of unique bins without dropping or assigning labels
+        bin_edges = pd.qcut(pacients_median_module_expression['MedianExpressionValue'], 3, duplicates='drop', retbins=True)[1]
+
+        # Generate labels based on the number of bins - 1 (since edges are always one more than the number of bins)
+        num_bins = len(bin_edges) - 1
+        if num_bins == 1:
+            print(f"The module with ID {module} does not have enough Genes to do tertile stratification.")
+            continue
+        
+        labels = ['Low', 'Medium', 'High'][:num_bins]
+
+        # Now apply qcut with the dynamically determined labels
+        pacients_median_module_expression['TertileGroup'] = pd.qcut(pacients_median_module_expression['MedianExpressionValue'], 3, labels=labels, duplicates='drop')
 
         # Merge with the survival days dataset for further analysis
         module_survival_stratification = pd.merge(pacients_median_module_expression, survival_dataset, left_index=True, right_index=True)
@@ -1266,7 +1278,7 @@ def survival_probability(correlations, corr_th, expression_profiles, survival_da
         plt.figure(figsize=(10, 6))
 
         # Plot survival curves for each group
-        for group in ['Low', 'Medium', 'High']:
+        for group in labels:
             # Select data for the group
             group_data = module_survival_stratification[module_survival_stratification['TertileGroup'] == group]
             
