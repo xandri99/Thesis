@@ -271,7 +271,7 @@ def plot_module_distribution(module_assignment):
     plt.show()
 
 
-def correlation_pvalue_heatmap(correlations, p_values, figures_dir):
+def correlation_pvalue_heatmap(correlations, p_values, figures_dir, title=""):
     """
     Generates a heatmap showing correlations between module eigengenes and clinical traits, 
     with annotations for the corresponding p-values.
@@ -287,7 +287,7 @@ def correlation_pvalue_heatmap(correlations, p_values, figures_dir):
     - None, it generates and saves the plot as a file.
     """
     print(f"{BOLD}{OKBLUE}Plotting and Saving the Module EigenGene to Clinical Trait Correlation...{ENDC}")
-    title_figure = 'Module Eigengene to Clinical Trait Correlation'
+    title_figure = 'Module Eigengene to Clinical Trait Correlation (' + title + ')'
 
     annotations = correlations.round(3).astype(str) + '\n(' + p_values.round(5).astype(str) + ')'
 
