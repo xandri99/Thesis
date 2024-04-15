@@ -16,4 +16,5 @@ __pycache__/
 
 ### PROTECTED DATA
 data/PROTECTED_DATA/
+data/Sessions/
 results/
