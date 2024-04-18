@@ -22,3 +22,6 @@ networkx==3.2.1
 tensorflow==2.15.0
 keras==2.15.0
 scipy==1.11.4
+
+torch
+torch_geometric
