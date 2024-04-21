@@ -11,6 +11,7 @@ All methods are commented callable functions, for an easier use.
 from functools import wraps
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import seaborn as sns
 import numpy as np
 import os
@@ -299,6 +300,50 @@ def correlation_pvalue_heatmap(correlations, p_values, figures_dir, title=""):
     plt.savefig(figures_dir + title_figure, dpi=150)
     plt.show()
     print(f"{BOLD}{OKBLUE}Done{ENDC}")
+
+    
+
+
+def correlation_heatmap(correlations, p_values, figures_dir, title="", p_value_th=0.45):
+    """
+    Generates a heatmap showing correlations between module eigengenes and clinical traits, 
+    with annotations for the corresponding p-values.
+    
+    Parameters:
+    - correlations (DataFrame): A square DataFrame where rows and columns represent modules 
+      and clinical traits respectively, and the cell values are the correlations between them.
+    - p_values (DataFrame): A DataFrame of the same shape as correlations, where each cell 
+      contains the p-value associated with the corresponding correlation.
+    - figures_dir (str): Directory path where the generated heatmap will be saved.
+    - p_value_th (float): p-value threshold. Over this, cells don't get colored
+    
+    Returns:
+    - None, it generates and saves the plot as a file.
+    """
+    print(f"{BOLD}{OKBLUE}Plotting and Saving the Module EigenGene to Clinical Trait Correlation...{ENDC}")
+    title_figure = 'Module Eigengene to Clinical Trait Correlation (' + title + ')'
+    
+    # Pvalue and Corr annotations
+    annotations = correlations.round(3).astype(str)
+
+    # Custom colors for under p_value
+    pval_filtered = p_values <= p_value_th
+
+    # Plot
+    plt.figure(figsize=(40, 40)) 
+    ax = sns.heatmap(correlations, annot=annotations.values, fmt='', cmap='coolwarm', center=0, vmin=-1, vmax=1, mask=~pval_filtered)
+    # Samples under 0.05 p value
+    sns.heatmap(correlations, mask=pval_filtered, cmap=['#ebebeb'], cbar=False, annot=False, ax=ax)
+    legend_patch = mpatches.Patch(color='#ebebeb', label=f'p-value > {p_value_th}')
+    plt.legend(handles=[legend_patch], loc='upper right', fontsize=20)
+
+    plt.title(title_figure, fontsize=20)
+    plt.xlabel('Selected Clincal Traits', fontsize=10)
+    plt.ylabel('Identified Modules, represented by their EigenGene', fontsize=10)
+    plt.savefig(figures_dir + title_figure, dpi=150)
+    plt.show()
+    print(f"{BOLD}{OKBLUE}Done{ENDC}")
+
 
 
 
