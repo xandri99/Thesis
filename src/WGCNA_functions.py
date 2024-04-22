@@ -456,6 +456,50 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th, trait_dataset):
     return cleaned_dataset, trait_dataset_filtered
 
 
+
+
+@measure_time
+def preprocess_TPM_Zscore(raw_data, expression_th, trait_dataset):
+    """
+    Cleans raw data by filtering out low expression genes, applying log transformation, and removing outliers based on PCA analysis.
+    
+    Parameters:
+    - raw_data (DataFrame): The raw data as a pandas DataFrame.
+    - expression_th (int): The value of expression under which genes are eliminated.
+    
+    Returns:
+    - DataFrame: The dataset after preprocessing and outlier removal.
+    """
+    print(f"{BOLD}{OKBLUE}Pre-processing...{ENDC}")
+
+    # Filter out genes with low expression across all samples
+    cleaned_dataset = raw_data.loc[:, (raw_data > expression_th).any(axis=0)].copy()
+    
+    # Apply log2 transformation to all values except for the first column (gene identifiers)
+    cleaned_dataset.iloc[:, 1:] = np.log2(cleaned_dataset.iloc[:, 1:] + 1)
+
+
+
+    # Data Standardization (Z-score normalization)
+    cleaned_dataset.iloc[:, 1:] = cleaned_dataset.iloc[:, 1:].apply(stats.zscore, axis=0)
+
+
+
+    # Print the number of genes removed
+    num_genes_removed = raw_data.shape[1] - cleaned_dataset.shape[1]
+    print(f"{BOLD}{WARNING}preprocess_TPM_outlier_deletion function removed {num_genes_removed} genes{ENDC}")
+
+    # Print the number of genes removed
+    num_pacients_removed = raw_data.shape[0] - cleaned_dataset.shape[0]
+    print(f"{BOLD}{WARNING}preprocess_TPM_outlier_deletion function removed {num_pacients_removed} pacients{ENDC}")
+
+    # Adjust the traits dataset to match the new list of pacients
+    trait_dataset_filtered = trait_dataset.loc[trait_dataset.index.isin(cleaned_dataset.index)]
+
+    print(f"{BOLD}{OKBLUE}Done...{ENDC}")
+    return cleaned_dataset, trait_dataset_filtered
+
+
 ################################################################################################
 
 
