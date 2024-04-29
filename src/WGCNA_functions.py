@@ -456,8 +456,6 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th, trait_dataset):
     return cleaned_dataset, trait_dataset_filtered
 
 
-
-
 @measure_time
 def preprocess_TPM_Zscore(raw_data, expression_th):
     """
@@ -497,6 +495,42 @@ def preprocess_TPM_Zscore(raw_data, expression_th):
 
     print(f"{BOLD}{OKBLUE}Done...{ENDC}")
     return cleaned_dataset
+
+
+@measure_time
+def preprocess_agresive(raw_data):
+    """
+    From GCNN paper.
+    """
+    print(f"{BOLD}{OKBLUE}Pre-processing...{ENDC}")
+
+    
+    ###Important to notice than in the paper, they work with log2(FPKM + 1) and we have TPM
+    # Applying log transformation to TPM data
+    transcriptomics_log_transformed = np.log2(raw_data + 1)
+
+
+    # thresholds as per the paper
+    mean_threshold = 0.5
+    std_dev_threshold = 0.8
+
+    # Kepp only genes with mean expression>0.5 and standard deviation>0.8
+    genes_mean_expression = transcriptomics_log_transformed.mean(axis=0)
+    genes_std_deviation = transcriptomics_log_transformed.std(axis=0)
+    transcriptomics_clean = transcriptomics_log_transformed.loc[:, (genes_mean_expression > mean_threshold) & (genes_std_deviation > std_dev_threshold)]
+
+    # Print the number of genes removed
+    num_genes_removed = raw_data.shape[1] - transcriptomics_clean.shape[1]
+    print("Preprocessing removed", str(num_genes_removed), "genes")
+    print("We have", str(transcriptomics_clean.shape[1]), "genes left")
+
+
+    # Normalize gene expression between 0 and 1
+    transcriptomics_normalized = (transcriptomics_clean - transcriptomics_clean.min()) / (transcriptomics_clean.max() - transcriptomics_clean.min())
+    
+
+    print(f"{BOLD}{OKBLUE}Done...{ENDC}")
+    return transcriptomics_normalized
 
 
 ################################################################################################
