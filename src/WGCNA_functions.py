@@ -346,6 +346,56 @@ def correlation_heatmap(correlations, p_values, figures_dir, title="", p_value_t
 
 
 
+def correlation_heatmap_paper(correlations, p_values, figures_dir, title="", p_value_th=0.45):
+    """
+    Generates a heatmap showing correlations between module for report
+    """
+    print(f"{BOLD}{OKBLUE}Plotting and Saving the Module EigenGene to Clinical Trait Correlation...{ENDC}")
+    title_figure = 'Module Eigengene to Clinical Trait Correlation (' + title + ')'
+    
+
+    # Custom colors for under p_value
+    pval_filtered = p_values <= p_value_th
+
+    # Plot
+    plt.figure(figsize=(40, 40)) 
+    ax = sns.heatmap(correlations, fmt='', cmap='coolwarm', center=0, vmin=-1, vmax=1, mask=~pval_filtered)
+    ax.set_xticklabels(ax.get_xticklabels(), fontsize=20)
+
+
+
+    # Samples under 0.05 p value
+    sns.heatmap(correlations, mask=pval_filtered, cmap=['#ebebeb'], cbar=False, annot=False, ax=ax)
+
+    plt.savefig(figures_dir + title_figure, dpi=150)
+    plt.show()
+    print(f"{BOLD}{OKBLUE}Done{ENDC}")
+
+    
+
+
+def correlation_heatmap_small(correlations, p_values, figures_dir, title="", p_value_th=0.45):
+    """
+    """
+    print(f"{BOLD}{OKBLUE}Plotting and Saving the Module EigenGene to Clinical Trait Correlation...{ENDC}")
+    
+    # Pvalue and Corr annotations
+    annotations = correlations.round(3).astype(str)
+
+    # Custom colors for under p_value
+    pval_filtered = p_values <= p_value_th
+
+    # Plot
+    plt.figure(figsize=(20, 20)) 
+    ax = sns.heatmap(correlations, annot=annotations.values, fmt='', cmap='coolwarm', center=0, vmin=-1, vmax=1, mask=~pval_filtered, annot_kws={"size": 12})
+    ax.set_xticklabels(ax.get_xticklabels(), fontsize=15)
+
+    # Samples under 0.05 p value
+    sns.heatmap(correlations, mask=pval_filtered, cmap=['#ebebeb'], cbar=False, annot=False, ax=ax)
+
+    plt.show()
+    print(f"{BOLD}{OKBLUE}Done{ENDC}")
+
 
 
 ################################################################################################
