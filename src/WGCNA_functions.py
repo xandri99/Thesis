@@ -1,6 +1,6 @@
 """
 WGCNA Implementation Using Numpy. 
-All methods are commented callable functions, for an easier use.
+All methods are commented and callable functions, for an easier use.
 
 """
 
@@ -74,7 +74,6 @@ def measure_time(func):
         # Record the start time of the function execution.
 
         start_time = time.time()
-        # Execute the function with any arguments and keyword arguments it might have.
         result = func(*args, **kwargs)
 
         # Record the end time and calculates elapsed time.
@@ -509,7 +508,7 @@ def preprocess_TPM_outlier_deletion(raw_data, expression_th, trait_dataset):
 @measure_time
 def preprocess_TPM_Zscore(raw_data, expression_th):
     """
-    Cleans raw data by filtering out low expression genes, applying log transformation, and removing outliers based on PCA analysis.
+    Cleans raw data by filtering out low expression genes, applying log transformation, and Zscore normalization.
     
     Parameters:
     - raw_data (DataFrame): The raw data as a pandas DataFrame.
